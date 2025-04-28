@@ -126,7 +126,7 @@ class GetUserNoPreAuth:
 
         opts = list()
         opts.append(constants.KDCOptions.forwardable.value)
-        opts.append(constants.KDCOptions.renewable.value)
+        opts.append(constants.KDCOptions.renewable_ok.value)
         opts.append(constants.KDCOptions.proxiable.value)
         reqBody['kdc-options'] = constants.encodeFlags(opts)
 
@@ -143,7 +143,15 @@ class GetUserNoPreAuth:
         reqBody['rtime'] = KerberosTime.to_asn1(now)
         reqBody['nonce'] = random.getrandbits(31)
 
-        supportedCiphers = (int(constants.EncryptionTypes.rc4_hmac.value),)
+        supportedCiphers = (int(constants.EncryptionTypes.aes256_cts_hmac_sha1_96),
+                    int(constants.EncryptionTypes.aes128_cts_hmac_sha1_96),
+                    int(constants.EncryptionTypes.aes128_cts_hmac_sha256_128),
+                    int(constants.EncryptionTypes.aes256_cts_hmac_sha384_192),
+                    int(constants.EncryptionTypes.des3_cbc_sha1_kd),
+                    int(constants.EncryptionTypes.rc4_hmac),
+                    int(constants.EncryptionTypes.camellia128_cts_cmac),
+                    int(constants.EncryptionTypes.camellia256_cts_cmac),
+	                )
 
         seq_set_iter(reqBody, 'etype', supportedCiphers)
 
@@ -153,12 +161,7 @@ class GetUserNoPreAuth:
             r = sendReceive(message, domain, self.__kdcIP)
         except KerberosError as e:
             if e.getErrorCode() == constants.ErrorCodes.KDC_ERR_ETYPE_NOSUPP.value:
-                # RC4 not available, OK, let's ask for newer types
-                supportedCiphers = (int(constants.EncryptionTypes.aes256_cts_hmac_sha1_96.value),
-                                    int(constants.EncryptionTypes.aes128_cts_hmac_sha1_96.value),)
-                seq_set_iter(reqBody, 'etype', supportedCiphers)
-                message = encoder.encode(asReq)
-                r = sendReceive(message, domain, self.__kdcIP)
+                raise e
             else:
                 raise e
 
