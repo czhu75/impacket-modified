@@ -22,7 +22,11 @@ def getASREP(username, domain, kdcHost):
 
     reqBody = asReq['req-body']
 
-    reqBody['kdc-options'] = KDCOptions('40810010')
+    opts = list()
+    opts.append(constants.KDCOptions.forwardable.value)
+    opts.append(constants.KDCOptions.renewable_ok.value)
+    opts.append(constants.KDCOptions.proxiable.value)
+    reqBody['kdc-options'] = constants.encodeFlags(opts)
 
     seq_set(reqBody, 'cname', userPrincipal.components_to_asn1)
     reqBody['realm'] = domain.upper()
