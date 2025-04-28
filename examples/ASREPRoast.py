@@ -21,11 +21,13 @@ def getKerberosASREP(username, domain, kdcHost):
     asReq['pvno'] = 5
     asReq['msg-type'] = int(constants.ApplicationTagNumbers.AS_REQ.value)
 
-    opts = [constants.KDCOptions.forwardable.value,
-            constants.KDCOptions.renewable.value,
-            constants.KDCOptions.proxiable.value]
+    kdcOptions = (
+        constants.KDCOptions.forwardable.value |
+        constants.KDCOptions.renewable.value |
+        constants.KDCOptions.proxiable.value
+    )
 
-    asReq['req-body']['kdc-options'] = KDCOptions(set(opts))
+    asReq['req-body']['kdc-options'] = KDCOptions(kdcOptions)
     asReq['req-body']['cname'] = userPrincipal.components_to_asn1
     asReq['req-body']['realm'] = domain.upper()
 
