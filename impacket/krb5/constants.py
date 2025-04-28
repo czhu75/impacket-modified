@@ -462,8 +462,12 @@ class EncryptionTypes(Enum):
     des3_cbc_sha1_kd             = 16
     aes128_cts_hmac_sha1_96      = 17
     aes256_cts_hmac_sha1_96      = 18
+    aes128_cts_hmac_sha256_128   = 19
+    aes256_cts_hmac_sha384_192   = 20
     rc4_hmac                     = 23
     rc4_hmac_exp                 = 24
+    camellia128_cts_cmac         = 25
+    camellia256_cts_cmac         = 26
     subkey_keymaterial           = 65
     rc4_hmac_old_exp             = -135
 
