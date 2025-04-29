@@ -22,6 +22,7 @@ from impacket.krb5.kerberosv5 import sendReceive, KerberosError
 from impacket.krb5.types import KerberosTime, Principal
 from impacket.ldap import ldap, ldapasn1
 from impacket.smbconnection import SMBConnection, SessionError
+from optparse import OptionParser
 
 def getTGT(userName, domain_name, kdcHost, requestPAC=True):
 
