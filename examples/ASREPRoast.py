@@ -67,7 +67,7 @@ def getTGT(userName, domain_name, kdcHost, requestPAC=True):
     reqBody['nonce'] = random.getrandbits(31)
 
     # CHECK THIS
-    supportedCiphers = (17,18,23,24,25,26)
+    supportedCiphers = (17,18,19,20,23,24)
 
     seq_set_iter(reqBody, 'etype', supportedCiphers)
 
