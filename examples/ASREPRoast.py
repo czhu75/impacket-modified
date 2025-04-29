@@ -67,6 +67,7 @@ def getTGT(userName, domain_name, kdcHost, requestPAC=True):
     reqBody['rtime'] = KerberosTime.to_asn1(now)
     reqBody['nonce'] = random.getrandbits(31)
 
+    print(int(constants.EncryptionTypes.aes256_cts_hmac_sha1_96))
     supportedCiphers = (int(constants.EncryptionTypes.aes256_cts_hmac_sha1_96),
                         int(constants.EncryptionTypes.aes128_cts_hmac_sha1_96),
                         int(constants.EncryptionTypes.aes128_cts_hmac_sha256_128),
