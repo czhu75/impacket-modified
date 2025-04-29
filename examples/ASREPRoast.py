@@ -68,15 +68,7 @@ def getTGT(userName, domain_name, kdcHost, requestPAC=True):
     reqBody['nonce'] = random.getrandbits(31)
 
     print(int(constants.EncryptionTypes.aes256_cts_hmac_sha1_96))
-    supportedCiphers = (int(constants.EncryptionTypes.aes256_cts_hmac_sha1_96),
-                        int(constants.EncryptionTypes.aes128_cts_hmac_sha1_96),
-                        int(constants.EncryptionTypes.aes128_cts_hmac_sha256_128),
-                        int(constants.EncryptionTypes.aes256_cts_hmac_sha384_192),
-                        int(constants.EncryptionTypes.des3_cbc_sha1_kd),
-                        int(constants.EncryptionTypes.rc4_hmac),
-                        int(constants.EncryptionTypes.camellia128_cts_cmac),
-                        int(constants.EncryptionTypes.camellia256_cts_cmac),
-                        )
+    supportedCiphers = (16,17,18,19)
 
     seq_set_iter(reqBody, 'etype', supportedCiphers)
 
