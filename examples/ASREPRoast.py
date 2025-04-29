@@ -74,7 +74,9 @@ def getTGT(userName, domain_name, kdcHost, requestPAC=True):
 
     try:
         r = sendReceive(message, domain, kdcHost)
+        print("test1")
     except KerberosError as e:
+        print("test2")
         if e.getErrorCode() == constants.ErrorCodes.KDC_ERR_ETYPE_NOSUPP.value:
             raise e
         else:
