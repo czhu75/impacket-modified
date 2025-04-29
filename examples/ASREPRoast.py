@@ -1,16 +1,27 @@
 #!/usr/bin/env python3
 
-import sys
-import os
+from __future__ import division
+from __future__ import print_function
+import argparse
 import datetime
 import logging
+import random
+import sys
 from binascii import hexlify
-from optparse import OptionParser
+
+from pyasn1.codec.der import decoder, encoder
+from pyasn1.type.univ import noValue
+
+from impacket import version
+from impacket.dcerpc.v5.samr import UF_ACCOUNTDISABLE, UF_DONT_REQUIRE_PREAUTH
+from impacket.examples import logger
+from impacket.examples.utils import parse_credentials
 from impacket.krb5 import constants
-from impacket.krb5.types import Principal, KerberosTime
-from impacket.krb5.asn1 import AS_REQ, KDCOptions, seq_set, seq_set_iter, AS_REP
-from impacket.krb5.kerberosv5 import sendReceive
-from pyasn1.codec.der import encoder, decoder
+from impacket.krb5.asn1 import AS_REQ, KERB_PA_PAC_REQUEST, KRB_ERROR, AS_REP, seq_set, seq_set_iter
+from impacket.krb5.kerberosv5 import sendReceive, KerberosError
+from impacket.krb5.types import KerberosTime, Principal
+from impacket.ldap import ldap, ldapasn1
+from impacket.smbconnection import SMBConnection, SessionError
 
 def getTGT(userName, domain_name, kdcHost, requestPAC=True):
 
