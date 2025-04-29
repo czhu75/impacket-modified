@@ -154,13 +154,6 @@ if __name__ == '__main__':
         response = getTGT(username, domain, dc_ip)
 
         print(response)
-
-        hash_str = parseASREPHash(response, username, domain)
-        if hash_str:
-            print('\n[+] AS-REP Hash for user %s:' % username)
-            print(hash_str)
-        else:
-            logging.error('Could not parse AS-REP into hash.')
     except Exception as e:
         logging.error('Error: %s' % str(e))
         sys.exit(1)
