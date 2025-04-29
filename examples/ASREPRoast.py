@@ -31,7 +31,7 @@ def getTGT(userName, domain_name, kdcHost, requestPAC=True):
     asReq = AS_REQ()
 
     domain = domain_name
-    kdcIp = kdcHost
+    kdcIP = kdcHost
     serverName = Principal('krbtgt/%s' % domain, type=constants.PrincipalNameType.NT_PRINCIPAL.value)
 
     pacRequest = KERB_PA_PAC_REQUEST()
